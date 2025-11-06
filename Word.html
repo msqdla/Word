@@ -3,63 +3,51 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>歌词搜索器（Excel 导入版）</title>
+<title>歌词搜索器</title>
 <style>
-  :root{--main:#6366f1;--bg:#f8fafc;--card:#fff;--line:#e5e7eb;}
-  body{margin:0;font-family:system-ui,Arial;background:var(--bg);display:flex;justify-content:center;padding:40px 20px;}
-  .card{width:100%;max-width:640px;background:var(--card);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.06);padding:32px;}
-  h1{margin:0 0 24px;font-size:24px;font-weight:600;color:#111;}
-  input[type=text]{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:16px;}
-  .result{margin-top:24px;}
-  .song{padding:12px 0;border-bottom:1px solid var(--line);}
-  .lyrics{white-space:pre-wrap;color:#444;margin-top:6px;font-size:15px;line-height:1.5;}
-  .highlight{background:#fef08a;font-weight:600;}
-  .none{color:#9ca3af;margin-top:10px;}
-  /* 导入区域 */
-  .upload-area{margin:24px 0 16px;display:flex;align-items:center;gap:12px;}
+  :root{--main:#6366f1;--bg:#f8fafc;--card:#fff;--line:#e5e7eb;--text:#111;--muted:#6b7280;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:var(--bg);display:flex;justify-content:center;padding:40px 20px;}
+  .card{width:100%;max-width:680px;background:var(--card);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.06);padding:32px;}
+  h1{margin:0 0 24px;font-size:26px;font-weight:600;color:var(--text);}
+  input[type=text]{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:16px;}
+  .upload-area{margin:24px 0;display:flex;align-items:center;gap:12px;}
   input[type=file]{font-size:14px;}
   button{background:var(--main);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;}
-  button:disabled{opacity:.6;cursor:not-allowed;}
+  button:disabled{opacity:.5;cursor:not-allowed;}
+  .result{margin-top:28px;}
+  .item{padding:18px 0;border-bottom:1px solid var(--line);}
+  .title{font-size:14px;color:var(--muted);margin-bottom:4px;}
+  .lyrics{font-size:18px;color:var(--text);white-space:pre-wrap;line-height:1.5;}
+  .highlight{background:#fef08a;font-weight:600;}
+  .none{color:var(--muted);margin-top:10px;}
 </style>
 </head>
 <body>
 <div class="card">
-  <h1>🎵 歌词搜索器</h1>
-
-  <!-- 搜索 -->
+  <h1>歌词搜索器</h1>
   <input id="searchInput" type="text" placeholder="输入歌词关键词…" />
-
-  <!-- Excel 上传 -->
   <div class="upload-area">
     <input type="file" id="excelFile" accept=".xlsx,.xls" />
-    <button id="uploadBtn">导入歌词</button>
+    <button id="uploadBtn">导入 Excel</button>
   </div>
-
-  <!-- 结果 -->
   <div id="result" class="result">请输入关键词开始搜索。</div>
 </div>
 
-<!-- 依赖 -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-  /* ======== 1. Supabase 初始化 ======== */
+  /* ====== Supabase 配置 ====== */
   const SUPABASE_URL  = 'https://jstizcjnfujlffdkdnov.supabase.co';
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzdGl6Y2puZnVqbGZmZGtkbm92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MTIxNTMsImV4cCI6MjA3Nzk4ODE1M30.xTOGlMQXmOTqXApPXI1TK4XZ0fkFjzGnP0LZDMYFZ24';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  /* ======== 2. 搜索（仅 lyrics） ======== */
-  const input   = document.getElementById('searchInput');
-  const result  = document.getElementById('result');
-
-  async function searchLyrics(kw){
+  /* ====== 搜索（仅 lyrics） ====== */
+  const input  = document.getElementById('searchInput');
+  const result = document.getElementById('result');
+  async function search(kw){
     if(!kw.trim()) return result.textContent='';
     result.textContent='搜索中…';
-    const {data,error} = await sb
-      .from('songs')
-      .select('id,lyrics')
-      .ilike('lyrics', `%${kw}%`)
-      .limit(100);
+    const {data,error} = await sb.from('songs').select('id,title,lyrics').ilike('lyrics',`%${kw}%`).limit(100);
     if(error) return result.textContent='搜索失败：'+error.message;
     render(data,kw);
   }
@@ -67,21 +55,19 @@
     if(!rows.length) return result.innerHTML='<p class="none">未找到相关歌词。</p>';
     result.innerHTML='';
     rows.forEach(r=>{
-      const div=document.createElement('div');div.className='song';
-      div.innerHTML=`<div class="lyrics">${highlight(r.lyrics,kw)}</div>`;
+      const div=document.createElement('div');div.className='item';
+      div.innerHTML=`
+        <div class="title">${esc(r.title||'未命名')}</div>
+        <div class="lyrics">${highlight(esc(r.lyrics||''),kw)}</div>`;
       result.appendChild(div);
     });
   }
-  function highlight(txt,kw){
-    return txt.replaceAll(kw,`<span class="highlight">${kw}</span>`);
-  }
-  input.addEventListener('input',e=>{
-    const kw=e.target.value.trim();
-    if(kw) searchLyrics(kw); else result.textContent='请输入关键词开始搜索。';
-  });
+  function esc(str){return str.replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));}
+  function highlight(txt,kw){return txt.replaceAll(kw,`<span class="highlight">${kw}</span>`);}
+  input.addEventListener('input',e=>{const kw=e.target.value.trim(); kw?search(kw):result.textContent='请输入关键词开始搜索。';});
 
-  /* ======== 3. Excel 导入 ======== */
-  const fileIn  = document.getElementById('excelFile');
+  /* ====== Excel 导入 ====== */
+  const fileIn=document.getElementById('excelFile');
   const uploadBtn=document.getElementById('uploadBtn');
   uploadBtn.onclick=async()=>{
     const f=fileIn.files[0];
@@ -89,15 +75,13 @@
     uploadBtn.disabled=true;
     const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
     const ws=wb.Sheets[wb.SheetNames[0]];
-    const data=XLSX.utils.sheet_to_json(ws,{header:1}); // 二维数组
-    // 约定：A 列就是歌词，其它列忽略
-    const lyrics=data.map(r=>r[0]).filter(v=>typeof v==='string'&&v.trim());
-    if(!lyrics.length){alert('未读取到任何歌词！');uploadBtn.disabled=false;return;}
-    const payload=lyrics.map(text=>({lyrics:text.trim()}));
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+    const payload=rows.map(r=>({title:String(r[0]||'').trim(),lyrics:String(r[1]||'').trim()}))
+                      .filter(o=>o.lyrics); // 必须有歌词
+    if(!payload.length){alert('未读取到有效歌词！');uploadBtn.disabled=false;return;}
     const {error}=await sb.from('songs').insert(payload);
     uploadBtn.disabled=false;
-    if(error) alert('导入失败：'+error.message);
-    else alert(`成功导入 ${payload.length} 条歌词！`);
+    if(error) alert('导入失败：'+error.message); else alert(`成功导入 ${payload.length} 条记录！`);
   };
 </script>
 </body>
