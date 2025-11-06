@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>句子搜索器（Supabase版）</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;padding:20px;background:#f7f9fc;}
+  .wrap{max-width:800px;margin:0 auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.08);}
+  h1{font-size:22px;margin-bottom:16px;}
+  input{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:16px;}
+  .result{margin-top:20px;}
+  .sentence{padding:10px 0;border-bottom:1px solid #eee;}
+  .highlight{background:yellow;font-weight:bold;}
+  .none{color:#777;margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔍 句子搜索（实时来自 Supabase）</h1>
+  <input id="searchInput" type="text" placeholder="输入关键词..." />
+  <div id="result" class="result">加载中…</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+  // Supabase 连接配置
+  const SUPABASE_URL = "https://jstizcjnfujlffdkdnov.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzdGl6Y2puZnVqbGZmZGtkbm92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MTIxNTMsImV4cCI6MjA3Nzk4ODE1M30.xTOGlMQXmOTqXApPXI1TK4XZ0fkFjzGnP0LZDMYFZ24";
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const input = document.getElementById('searchInput');
+  const resultDiv = document.getElementById('result');
+  let sentences = [];
+
+  // 读取句子
+  async function loadSentences() {
+    resultDiv.textContent = '正在加载句子...';
+    const { data, error } = await supabase
+      .from('sentences')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error(error);
+      resultDiv.textContent = '加载失败：' + error.message;
+      return;
+    }
+    sentences = data.map(r => r.content);
+    resultDiv.textContent = '已加载 ' + sentences.length + ' 条句子。';
+  }
+
+  // 搜索并显示
+  function renderResults(keyword) {
+    resultDiv.innerHTML = '';
+    if (!keyword.trim()) return;
+    const filtered = sentences.filter(s => s.includes(keyword));
+    if (filtered.length === 0) {
+      resultDiv.innerHTML = '<p class="none">没有找到匹配的句子。</p>';
+      return;
+    }
+    filtered.forEach(s => {
+      const highlighted = s.replaceAll(keyword, `<span class="highlight">${keyword}</span>`);
+      const div = document.createElement('div');
+      div.className = 'sentence';
+      div.innerHTML = highlighted;
+      resultDiv.appendChild(div);
+    });
+  }
+
+  input.addEventListener('input', e => {
+    renderResults(e.target.value);
+  });
+
+  loadSentences();
+</script>
+</body>
+</html>
