@@ -5,41 +5,40 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>歌词搜索</title>
 <style>
-:root{--main:#6366f1;--bg:#f7f9fc;--card:#fff;--line:#e5e7eb;--text:#111;--muted:#6b7280;}
+:root{--bg:#fffef1;--card:#fffdf6;--line:#e5e7eb;--text:#333;--muted:#777;}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:var(--bg);display:flex;justify-content:center;padding:40px 20px;}
-.card{width:100%;max-width:680px;background:var(--card);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.06);padding:32px;}
-h1{font-size:26px;margin:0 0 24px;font-weight:600;color:var(--text);}
-input[type=text]{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:16px;}
-.result{margin-top:24px;max-height:60vh;overflow:auto;}
-.item{padding:18px 0;border-bottom:1px solid var(--line);}
-.item .title{font-size:14px;color:var(--muted);margin-bottom:4px;}
-.item .lyrics{font-size:18px;color:var(--text);white-space:pre-wrap;line-height:1.5;}
-.highlight{background:#fef08a;font-weight:600;}
+.card{width:100%;max-width:720px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:40px;}
+h1{font-size:24px;margin:0 0 24px;font-weight:500;color:var(--text);letter-spacing:.5px;}
+input[type=text]{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:6px;font-size:16px;background:#fff;}
+.result{margin-top:32px;}
+.item{padding:20px 0;border-bottom:1px solid var(--line);}
+.item:last-child{border:none;}
+.meta{font-size:13px;color:var(--muted);margin-bottom:6px;}
+.lyrics{font-size:17px;color:var(--text);white-space:pre-wrap;line-height:1.6;}
+.highlight{background:#f9e076;}
 .none{color:var(--muted);margin-top:10px;}
 </style>
 </head>
 <body>
 <div class="card">
-  <h1>🔍 歌词搜索</h1>
-  <input id="searchInput" type="text" placeholder="输入歌词关键词…" />
+  <h1>歌词搜索</h1>
+  <input id="searchInput" type="text" placeholder="输入歌词关键词…" autocomplete="off">
   <div id="result" class="result">请输入关键词开始搜索。</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-/* ====== 配置 ====== */
 const SUPABASE_URL  = 'https://jstizcjnfujlffdkdnov.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzdGl6Y2puZnVqbGZmZGtkbm92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MTIxNTMsImV4cCI6MjA3Nzk4ODE1M30.xTOGlMQXmOTqXApPXI1TK4XZ0fkFjzGnP0LZDMYFZ24';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-/* ====== 搜索 ====== */
 const input = document.getElementById('searchInput');
 const result = document.getElementById('result');
 
 async function searchLyrics(kw){
   if(!kw.trim()) return result.textContent='请输入关键词开始搜索。';
   result.textContent='搜索中…';
-  const {data,error} = await sb.from('songs').select('id,title,lyrics').ilike('lyrics',`%${kw}%`).limit(100);
+  const {data,error} = await sb.from('songs').select('id,title,artist,year,lyrics').ilike('lyrics',`%${kw}%`).limit(100);
   if(error) return result.textContent='搜索失败：'+error.message;
   render(data,kw);
 }
@@ -49,7 +48,7 @@ function render(rows,kw){
   rows.forEach(r=>{
     const div=document.createElement('div');div.className='item';
     div.innerHTML=`
-      <div class="title">${esc(r.title||'未命名')}</div>
+      <div class="meta">${esc(r.title||'未命名')}${r.year?' · '+r.year:''}${r.artist?' · '+r.artist:''}</div>
       <div class="lyrics">${highlight(esc(r.lyrics||''),kw)}</div>`;
     result.appendChild(div);
   });
