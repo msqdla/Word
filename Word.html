@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -24,16 +24,16 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-  // Supabase 连接配置
-  const SUPABASE_URL = "https://jstizcjnfujlffdkdnov.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzdGl6Y2puZnVqbGZmZGtkbm92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MTIxNTMsImV4cCI6MjA3Nzk4ODE1M30.xTOGlMQXmOTqXApPXI1TK4XZ0fkFjzGnP0LZDMYFZ24";
+  // ✅ Supabase 连接配置（使用你的项目）
+  const SUPABASE_URL = "https://jozhcjtuoveuavxmibjo.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvemhjanR1b3ZldWF2eGxqa21pYmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyMzAxODMsImV4cCI6MjA3NzgwNjE4M30.AUEyXqe8mm4PVHpLYzpWZ98BMT4kUbKNNS2U2QHMSAs";
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const input = document.getElementById('searchInput');
   const resultDiv = document.getElementById('result');
   let sentences = [];
 
-  // 读取句子
+  // ✅ 读取句子
   async function loadSentences() {
     resultDiv.textContent = '正在加载句子...';
     const { data, error } = await supabase
@@ -46,11 +46,12 @@
       resultDiv.textContent = '加载失败：' + error.message;
       return;
     }
+
     sentences = data.map(r => r.content);
     resultDiv.textContent = '已加载 ' + sentences.length + ' 条句子。';
   }
 
-  // 搜索并显示
+  // ✅ 搜索并显示
   function renderResults(keyword) {
     resultDiv.innerHTML = '';
     if (!keyword.trim()) return;
