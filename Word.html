@@ -3,115 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>🎵 歌曲导入 & 歌词搜索</title>
+<title>歌词搜索</title>
 <style>
 :root{--main:#6366f1;--bg:#f7f9fc;--card:#fff;--line:#e5e7eb;--text:#111;--muted:#6b7280;}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);padding:30px;display:flex;justify-content:center;}
-.wrap{width:100%;max-width:640px;background:var(--card);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.06);padding:28px;}
-h1{font-size:24px;margin:0 0 20px;}
-section{margin-bottom:32px;}
-input[type=file]{margin-top:10px;}
-button{padding:10px 20px;border:none;border-radius:8px;background:var(--main);color:#fff;font-size:16px;cursor:pointer;}
-button:disabled{opacity:.5;}
-.status{margin-top:12px;color:var(--muted);}
-
-/* 搜索区 */
-input[type=text]{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:16px;margin-bottom:20px;}
-.result{max-height:60vh;overflow:auto;}
-.item{padding:16px 0;border-bottom:1px solid var(--line);}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:var(--bg);display:flex;justify-content:center;padding:40px 20px;}
+.card{width:100%;max-width:680px;background:var(--card);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.06);padding:32px;}
+h1{font-size:26px;margin:0 0 24px;font-weight:600;color:var(--text);}
+input[type=text]{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;font-size:16px;}
+.result{margin-top:24px;max-height:60vh;overflow:auto;}
+.item{padding:18px 0;border-bottom:1px solid var(--line);}
 .item .title{font-size:14px;color:var(--muted);margin-bottom:4px;}
 .item .lyrics{font-size:18px;color:var(--text);white-space:pre-wrap;line-height:1.5;}
 .highlight{background:#fef08a;font-weight:600;}
-.none{color:var(--muted);}
+.none{color:var(--muted);margin-top:10px;}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <!-- ====== 导入区 ====== -->
-  <section>
-    <h1>🎵 导入歌曲到 Supabase</h1>
-    <p>请选择包含“歌名、原唱、发行年、歌词”四列的 Excel 文件：</p>
-    <input type="file" id="fileInput" accept=".xlsx,.xls" />
-    <button id="uploadBtn">上传到 Supabase</button>
-    <div id="status" class="status"></div>
-  </section>
-
-  <!-- ====== 搜索区 ====== -->
-  <section>
-    <h1>🔍 歌词搜索</h1>
-    <input id="searchInput" type="text" placeholder="输入歌词关键词…" />
-    <div id="result" class="result">请输入关键词开始搜索。</div>
-  </section>
+<div class="card">
+  <h1>🔍 歌词搜索</h1>
+  <input id="searchInput" type="text" placeholder="输入歌词关键词…" />
+  <div id="result" class="result">请输入关键词开始搜索。</div>
 </div>
 
-<!-- 依赖 -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-/* ========== 基础配置 ========== */
+/* ====== 配置 ====== */
 const SUPABASE_URL  = 'https://jstizcjnfujlffdkdnov.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzdGl6Y2puZnVqbGZmZGtkbm92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MTIxNTMsImV4cCI6MjA3Nzk4ODE1M30.xTOGlMQXmOTqXApPXI1TK4XZ0fkFjzGnP0LZDMYFZ24';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-/* ========== 导入功能 ========== */
-const fileInput = document.getElementById('fileInput');
-const uploadBtn = document.getElementById('uploadBtn');
-const statusDiv = document.getElementById('status');
-
-uploadBtn.onclick = async () => {
-  const file = fileInput.files[0];
-  if (!file) return alert("请先选择 Excel 文件！");
-  uploadBtn.disabled = true;
-  statusDiv.textContent = "正在解析 Excel...";
-
-  const data = await file.arrayBuffer();
-  const wb   = XLSX.read(data, { type: "array" });
-  const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-  if (!rows.length) { statusDiv.textContent = "Excel 为空！"; uploadBtn.disabled = false; return; }
-
-  const payload = rows.map(r => ({
-    title: r["歌名"]?.toString().trim() || "未命名",
-    artist: r["原唱"] || null,
-    year:   r["发行年"] || null,
-    lyrics: r["歌词"] || null
-  }));
-
-  const batch = 50;
-  for (let i = 0; i < payload.length; i += batch) {
-    const { error } = await sb.from("songs").insert(payload.slice(i, i + batch));
-    if (error) { statusDiv.textContent = "❌ 导入失败：" + error.message; uploadBtn.disabled = false; return; }
-    statusDiv.textContent = `已上传 ${Math.min(i + batch, payload.length)}/${payload.length}`;
-  }
-  statusDiv.textContent = "✅ 全部上传完成！";
-  uploadBtn.disabled = false;
-};
-
-/* ========== 搜索功能 ========== */
-const searchInput = document.getElementById('searchInput');
-const resultDiv   = document.getElementById('result');
+/* ====== 搜索 ====== */
+const input = document.getElementById('searchInput');
+const result = document.getElementById('result');
 
 async function searchLyrics(kw){
-  if(!kw.trim()) return resultDiv.textContent='请输入关键词开始搜索。';
-  resultDiv.textContent='搜索中…';
+  if(!kw.trim()) return result.textContent='请输入关键词开始搜索。';
+  result.textContent='搜索中…';
   const {data,error} = await sb.from('songs').select('id,title,lyrics').ilike('lyrics',`%${kw}%`).limit(100);
-  if(error) return resultDiv.textContent='搜索失败：'+error.message;
+  if(error) return result.textContent='搜索失败：'+error.message;
   render(data,kw);
 }
 function render(rows,kw){
-  if(!rows.length) return resultDiv.innerHTML='<p class="none">未找到相关歌词。</p>';
-  resultDiv.innerHTML='';
+  if(!rows.length) return result.innerHTML='<p class="none">未找到相关歌词。</p>';
+  result.innerHTML='';
   rows.forEach(r=>{
     const div=document.createElement('div');div.className='item';
     div.innerHTML=`
       <div class="title">${esc(r.title||'未命名')}</div>
       <div class="lyrics">${highlight(esc(r.lyrics||''),kw)}</div>`;
-    resultDiv.appendChild(div);
+    result.appendChild(div);
   });
 }
 function esc(str){return str.replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));}
 function highlight(txt,kw){return txt.replaceAll(kw,`<span class="highlight">${kw}</span>`);}
-searchInput.addEventListener('input',e=>{const kw=e.target.value.trim(); searchLyrics(kw);});
+input.addEventListener('input',e=>searchLyrics(e.target.value.trim()));
 </script>
 </body>
 </html>
