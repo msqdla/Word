@@ -1,99 +1,94 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>歌曲资料导入工具</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>歌曲搜索器（Supabase版）</title>
 <style>
   body{font-family:system-ui,Arial;background:#f8fafc;margin:0;padding:20px;}
-  .wrap{max-width:700px;margin:0 auto;background:#fff;padding:24px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.08);}
-  h1{font-size:22px;margin-bottom:12px;}
-  input{padding:8px;font-size:15px;}
-  button{padding:10px 18px;background:#007bff;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-top:10px;}
-  button:disabled{background:#ccc;}
-  .status{margin-top:16px;font-size:14px;color:#555;}
-  table{width:100%;border-collapse:collapse;margin-top:16px;}
-  th,td{border:1px solid #eee;padding:8px;text-align:center;font-size:14px;}
-  th{background:#f3f6fb;}
+  .wrap{max-width:800px;margin:0 auto;background:#fff;padding:24px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.08);}
+  h1{font-size:22px;margin-bottom:16px;}
+  input{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:16px;}
+  .result{margin-top:20px;}
+  .song{padding:12px 0;border-bottom:1px solid #eee;}
+  .title{font-weight:bold;font-size:16px;color:#333;}
+  .artist{color:#666;font-size:14px;}
+  .lyrics{margin-top:6px;color:#444;white-space:pre-wrap;}
+  .highlight{background:yellow;font-weight:bold;}
+  .none{color:#777;margin-top:10px;}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🎵 Excel 导入歌曲资料</h1>
-  <p>表格需包含列：<b>歌名</b>、<b>原唱</b>、<b>发行年</b>、<b>歌词</b></p>
-  <input type="file" id="fileInput" accept=".xlsx,.xls" />
-  <button id="uploadBtn" disabled>上传到 Supabase</button>
-  <div class="status" id="status">未选择文件。</div>
-
-  <table id="previewTable" style="display:none;">
-    <thead><tr><th>歌名</th><th>原唱</th><th>发行年</th><th>歌词</th></tr></thead>
-    <tbody></tbody>
-  </table>
+  <h1>🎵 歌曲搜索（来自 Supabase）</h1>
+  <input type="text" id="searchInput" placeholder="输入歌名、原唱或歌词关键词..." />
+  <div id="result" class="result">加载中…</div>
 </div>
 
+<!-- 依赖 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-  // ✅ 替换为你的 Supabase 项目信息
+  // ✅ Supabase 项目配置（使用你的）
   const SUPABASE_URL = "https://jstizcjnfujlffdkdnov.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzdGl6Y2puZnVqbGZmZGtkbm92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MTIxNTMsImV4cCI6MjA3Nzk4ODE1M30.xTOGlMQXmOTqXApPXI1TK4XZ0fkFjzGnP0LZDMYFZ24";
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const fileInput = document.getElementById('fileInput');
-  const uploadBtn = document.getElementById('uploadBtn');
-  const statusEl = document.getElementById('status');
-  const tableBody = document.querySelector('#previewTable tbody');
-  const previewTable = document.getElementById('previewTable');
+  const input = document.getElementById('searchInput');
+  const resultDiv = document.getElementById('result');
 
-  let songsData = [];
+  async function searchSongs(keyword) {
+    resultDiv.innerHTML = '';
+    if (!keyword.trim()) return;
 
-  // 读取Excel文件
-  fileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-      const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(sheet);
-      songsData = json.map(row => ({
-        title: row["歌名"] || "",
-        artist: row["原唱"] || "",
-        year: row["发行年"] || "",
-        lyrics: row["歌词"] || ""
-      }));
-      renderPreview(songsData);
-      uploadBtn.disabled = songsData.length === 0;
-      statusEl.textContent = `已读取 ${songsData.length} 条记录。`;
-    };
-    reader.readAsArrayBuffer(file);
-  });
+    resultDiv.textContent = '搜索中...';
+    // 🔍 模糊匹配 title / artist / lyrics
+    const { data, error } = await supabase
+      .from('songs')
+      .select('*')
+      .or(`title.ilike.%${keyword}%,artist.ilike.%${keyword}%,lyrics.ilike.%${keyword}%`)
+      .limit(100);
 
-  // 上传到 Supabase
-  uploadBtn.addEventListener('click', async () => {
-    if (songsData.length === 0) return alert("请先选择Excel文件。");
-    uploadBtn.disabled = true;
-    statusEl.textContent = "正在上传，请稍候...";
-    const { error } = await supabase.from("songs").insert(songsData);
-    uploadBtn.disabled = false;
     if (error) {
       console.error(error);
-      statusEl.textContent = "上传失败：" + error.message;
+      resultDiv.textContent = '搜索失败：' + error.message;
+      return;
+    }
+
+    renderResults(data, keyword);
+  }
+
+  function renderResults(rows, keyword) {
+    resultDiv.innerHTML = '';
+    if (!rows || rows.length === 0) {
+      resultDiv.innerHTML = '<p class="none">没有找到匹配结果。</p>';
+      return;
+    }
+
+    rows.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'song';
+      const highlight = (text) =>
+        text ? text.replaceAll(keyword, `<span class="highlight">${keyword}</span>`) : '';
+      div.innerHTML = `
+        <div class="title">${highlight(r.title || '')}</div>
+        <div class="artist">${highlight(r.artist || '')}（${r.year || '未知年份'}）</div>
+        <div class="lyrics">${highlight((r.lyrics || '').slice(0, 200))}${r.lyrics && r.lyrics.length > 200 ? '...' : ''}</div>
+      `;
+      resultDiv.appendChild(div);
+    });
+  }
+
+  input.addEventListener('input', e => {
+    const keyword = e.target.value.trim();
+    if (keyword.length >= 1) {
+      searchSongs(keyword);
     } else {
-      statusEl.textContent = "✅ 上传成功，共 " + songsData.length + " 条记录！";
+      resultDiv.innerHTML = '';
     }
   });
 
-  function renderPreview(rows) {
-    previewTable.style.display = rows.length ? "table" : "none";
-    tableBody.innerHTML = "";
-    rows.slice(0, 10).forEach(r => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${r.title}</td><td>${r.artist}</td><td>${r.year}</td><td>${r.lyrics.slice(0,50)}...</td>`;
-      tableBody.appendChild(tr);
-    });
-  }
+  // 首次加载提示
+  resultDiv.textContent = '请输入关键词开始搜索。';
 </script>
 </body>
 </html>
