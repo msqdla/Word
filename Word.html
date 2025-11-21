@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>歌词搜索</title>
+<title>老达搜词</title>
 <style>
 :root{--bg:#fffef1;--card:#fffdf6;--line:#e5e7eb;--text:#333;--muted:#777;}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:var(--bg);display:flex;justify-content:center;padding:40px 20px;}
@@ -21,9 +21,9 @@ input[type=text]{width:100%;padding:12px 14px;border:1px solid var(--line);borde
 </head>
 <body>
 <div class="card">
-  <h1>歌词搜索</h1>
+  <h1>老达搜词</h1>
   <input id="searchInput" type="text" placeholder="输入歌词关键词…" autocomplete="off">
-  <div id="result" class="result">请输入关键词开始搜索。</div>
+  <div id="result" class="result">输入词开搜。</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -59,3 +59,4 @@ input.addEventListener('input',e=>searchLyrics(e.target.value.trim()));
 </script>
 </body>
 </html>
+
