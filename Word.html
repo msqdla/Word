@@ -5,18 +5,89 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>老达搜词</title>
 <style>
-:root{--bg:#fffef1;--card:#fffdf6;--line:#e5e7eb;--text:#333;--muted:#777;}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;background:var(--bg);display:flex;justify-content:center;padding:40px 20px;}
-.card{width:100%;max-width:720px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:40px;}
-h1{font-size:24px;margin:0 0 24px;font-weight:500;color:var(--text);letter-spacing:.5px;}
-input[type=text]{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:6px;font-size:16px;background:#fff;}
-.result{margin-top:32px;}
-.item{padding:20px 0;border-bottom:1px solid var(--line);}
-.item:last-child{border:none;}
-.meta{font-size:13px;color:var(--muted);margin-bottom:6px;}
-.lyrics{font-size:17px;color:var(--text);white-space:pre-wrap;line-height:1.6;}
-.highlight{background:#f9e076;}
-.none{color:var(--muted);margin-top:10px;}
+:root {
+  --bg: #fffef1;
+  --card: rgba(255, 255, 246, 0.8); /* 调整这里的rgba值可以改变透明度 */
+  --line: #e5e7eb;
+  --text: #333;
+  --muted: #777;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+  background-image: url('https://github.com/msqdla/Word/blob/main/Music-Word.webp?raw=true');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+  min-height: 100vh;
+}
+
+.card {
+  width: 100%;
+  max-width: 720px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 40px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+h1 {
+  font-size: 24px;
+  margin: 0 0 24px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: .5px;
+}
+
+input[type=text] {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 16px;
+  background: #fff;
+}
+
+.result {
+  margin-top: 32px;
+}
+
+.item {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.item:last-child {
+  border: none;
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.lyrics {
+  font-size: 17px;
+  color: var(--text);
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.highlight {
+  background: #f9e076;
+}
+
+.none {
+  color: var(--muted);
+  margin-top: 10px;
+}
 </style>
 </head>
 <body>
@@ -42,6 +113,7 @@ async function searchLyrics(kw){
   if(error) return result.textContent='搜索失败：'+error.message;
   render(data,kw);
 }
+
 function render(rows,kw){
   if(!rows.length) return result.innerHTML='<p class="none">未找到相关歌词。</p>';
   result.innerHTML='';
@@ -53,10 +125,25 @@ function render(rows,kw){
     result.appendChild(div);
   });
 }
-function esc(str){return str.replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));}
-function highlight(txt,kw){return txt.replaceAll(kw,`<span class="highlight">${kw}</span>`);}
-input.addEventListener('input',e=>searchLyrics(e.target.value.trim()));
+
+function esc(str){
+  return str.replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+
+function highlight(txt,kw){
+  // 使用正则忽略大小写高亮，更准确
+  const regex = new RegExp(`(${kw})`, 'gi');
+  return txt.replace(regex, '<span class="highlight">$1</span>');
+}
+
+input.addEventListener('input', e => {
+  const value = e.target.value.trim();
+  if (value === '') {
+    result.textContent = '输入词开搜。';
+  } else {
+    searchLyrics(value);
+  }
+});
 </script>
 </body>
 </html>
-
